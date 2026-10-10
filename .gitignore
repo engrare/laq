@@ -1,0 +1,16 @@
+# model, veri, sirlar
+*.onnx
+modeller/
+data/
+girdi/
+referans/
+cikti_boya/
+kod/dugme.json
+kod/duzeltme/
+.venv/
+__pycache__/
+*.pyc
+.env
+*.log
+*.zip
+instagram/

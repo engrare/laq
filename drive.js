@@ -56,7 +56,9 @@ function kartYap(oge, klasor) {
     img.onerror = () => { img.remove(); on.textContent = "🖼"; };
     on.append(img); on.onclick = () => onizleAc(oge);
   }
-  c.append(cb, on, el("div", "ad", oge.ad), el("div", "bil", klasor ? `${oge.adet} öğe` : boyutYaz(oge.boyut)));
+  const ad = el("div", "ad", oge.ad);
+  if (klasor) { ad.onclick = on.onclick; ad.style.cursor = "pointer"; }
+  c.append(cb, on, ad, el("div", "bil", klasor ? `${oge.adet} öğe` : boyutYaz(oge.boyut)));
   return c;
 }
 function driveCiz() {

@@ -169,7 +169,7 @@ def foto_sil(iid: str, tur: str, kid: str):
 
 
 def duzeltme_kaydet(iid: str, mid: str, ham: bytes, dugme_json: str):
-    """Tarayicidan gelen duzeltme (w*h bayt, 0/1/2) + dugme listesi. maske_duzelt.py ile ayni PNG biciminde saklanir."""
+    """Tarayicidan gelen duzeltme (w*h bayt, 0/1/2; 0 = dokunulmadi, onceki kayitla birlestirilir) + dugme listesi. maske_duzelt.py ile ayni PNG biciminde saklanir."""
     with KILIT:
         d = yukle_durum(iid)
         if d["uret"]["durum"] in ("kuyrukta", "calisiyor"):
@@ -193,6 +193,10 @@ def duzeltme_kaydet(iid: str, mid: str, ham: bytes, dugme_json: str):
         a = np.frombuffer(ham, np.uint8).reshape(m["h"], m["w"])
         a = np.where(a > 2, 0, a).astype(np.uint8)
         yol = dizin(iid) / "m" / f"{mid}.duzeltme.png"
+        if yol.exists():   # tarayici yalnizca yeni cizimleri yollar (hesap bitince sifirlanir): eskilerin ustune bindir
+            eski = cv2.imdecode(np.fromfile(str(yol), np.uint8), cv2.IMREAD_GRAYSCALE)
+            if eski is not None and eski.shape == a.shape:
+                a = np.where(a > 0, a, eski).astype(np.uint8)
         if a.any():
             cv2.imencode(".png", a)[1].tofile(str(yol))
         else:

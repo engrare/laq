@@ -150,9 +150,7 @@ async function editorAc(mid) {
   if (!m || m.durum === "bekliyor" || m.durum === "hesaplaniyor") { mesaj("Bu fotoğrafın maskesi henüz hesaplanıyor, birkaç saniye bekleyin."); return; }
   if (["kuyrukta", "calisiyor"].includes(IS.uret.durum)) { mesaj("Üretim sürerken düzenlenemez."); return; }
   ed.id = mid; ed.w = m.w; ed.h = m.h; ed.geri = []; ed.orijinal = false; ed.bekliyor = false;
-  const bin = await fetch(`${API}/api/is/${IS.id}/manken/${mid}/duzeltme.bin`, { credentials: "include", cache: "no-store" });
-  ed.labels = new Uint8Array(await bin.arrayBuffer());
-  if (ed.labels.length !== ed.w * ed.h) ed.labels = new Uint8Array(ed.w * ed.h);
+  ed.labels = new Uint8Array(ed.w * ed.h);   // onceki duzeltmeler sunucuda kayitli ve sonuca islenmis; ekranda yalnizca yeni cizimler
   ed.dugme = JSON.parse(JSON.stringify(m.dugme || []));
   for (const c of [ov, dg]) { c.width = ed.w; c.height = ed.h; }
   sahne.style.width = ed.w + "px"; sahne.style.height = ed.h + "px";
@@ -347,6 +345,7 @@ function editorGuncelle() {
   if (!m) return;
   if (m.durum === "hazir") {
     ed.bekliyor = false; edDurum("Güncellendi ✓");
+    ed.labels = new Uint8Array(ed.w * ed.h); ed.imgData.data.fill(0); ov.getContext("2d").putImageData(ed.imgData, 0, 0);   // ekle/çıkar işaretleri sonuca işlendi: sıfırla
     ed.orijinal = false; resimYukle(m); dugmeCiz();
   } else if (m.durum === "hata") { ed.bekliyor = false; edDurum("Hata: " + (m.hata || "")); }
 }

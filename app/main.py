@@ -251,4 +251,5 @@ app.include_router(drive.router, dependencies=[Depends(oturum)])
 
 
 # arayuz de bu sunucudan acilabilir (GitHub Pages kullanilmazsa); API yollari yukarida oncelikli
-app.mount("/", StaticFiles(directory=config.KOK / "static", html=True), name="static")
+if config.ARAYUZ_SUN:
+    app.mount("/", StaticFiles(directory=config.KOK / "static", html=True), name="static")

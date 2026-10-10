@@ -21,3 +21,5 @@ ON_YUZ = [o.strip().rstrip("/") for o in os.environ.get("LAQ_ON_YUZ", "https://l
 MODEL = KOK / "modeller" / "segformer_b2_clothes.onnx"
 CIKTI_GENISLIK = 1080
 CIKTI_KALITE = 97
+# 0 = bu sunucu yalnizca API'dir (arayuz GitHub Pages'ten gelir); 1 = arayuz de buradan acilir
+ARAYUZ_SUN = os.environ.get("LAQ_ARAYUZ", "1") != "0"

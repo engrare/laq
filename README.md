@@ -33,7 +33,7 @@ Arayüz (`static/`) statik dosyalardır; GitHub Pages'te `docs/` klasöründen y
 |---|---|---|
 | `LAQ_PAROLA` | (zorunlu, ≥8 karakter) | Tek giriş parolası |
 | `LAQ_PORT` | 8101 | Dinlenen port |
-| `LAQ_ON_YUZ` | `https://laq.engrare.com` | İzin verilen arayüz adres(ler)i, virgülle ayrılır |
+| `LAQ_ON_YUZ` | `https://laq.engrare.com,http://laq.engrare.com` | İzin verilen arayüz adres(ler)i, virgülle ayrılır |
 | `LAQ_VERI` | `./data` | Yüklenen/üretilen veri klasörü |
 | `LAQ_SAKLA_GUN` | 7 | Eski işlerin otomatik silinme süresi |
 | `LAQ_MAX_DOSYA_MB` | 15 | Dosya başına boyut sınırı |

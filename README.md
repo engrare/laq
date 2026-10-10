@@ -21,11 +21,19 @@ cp .env.example .env                            # LAQ_PAROLA'yı doldurun
 ```
 Uygulama yalnızca `127.0.0.1`'i dinler; HTTPS için bir ters vekil (reverse proxy) ya da tünel kullanın. Python 3.11+ ve `numpy`, `opencv-python-headless`, `onnxruntime`, `pillow`, `fastapi`, `uvicorn`, `python-multipart` gerekir.
 
+## Yayın: GitHub Pages (arayüz) + sunucu (API)
+Arayüz (`static/`) statik dosyalardır; GitHub Pages'te `docs/` klasöründen yayınlanabilir, API ise ayrı bir sunucuda çalışır:
+- `docs/config.js` içindeki `window.LAQ_API`, API adresini gösterir (ör. `https://laq-api.example.com`).
+- API tarafında `LAQ_ON_YUZ` arayüzün adresini içermelidir (CORS + Origin denetimi).
+- Çerez `SameSite=Lax` olduğundan arayüz ve API **aynı kayıtlı alan adının** alt alan adları olmalıdır (ör. `laq.example.com` ve `laq-api.example.com`).
+- Pages kullanılmazsa `./run.sh` arayüzü de kendisi sunar (`config.js` boş = aynı sunucu).
+
 ## Ayarlar (ortam değişkenleri)
 | Değişken | Varsayılan | Anlamı |
 |---|---|---|
 | `LAQ_PAROLA` | (zorunlu, ≥8 karakter) | Tek giriş parolası |
 | `LAQ_PORT` | 8101 | Dinlenen port |
+| `LAQ_ON_YUZ` | `https://laq.engrare.com` | İzin verilen arayüz adres(ler)i, virgülle ayrılır |
 | `LAQ_VERI` | `./data` | Yüklenen/üretilen veri klasörü |
 | `LAQ_SAKLA_GUN` | 7 | Eski işlerin otomatik silinme süresi |
 | `LAQ_MAX_DOSYA_MB` | 15 | Dosya başına boyut sınırı |

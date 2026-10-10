@@ -14,6 +14,7 @@ import cv2
 import numpy as np
 from fastapi import Depends, FastAPI, File, Form, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -55,7 +56,7 @@ async def hata_isle(_: Request, e: Hata):
 async def guvenlik(request: Request, call_next):
     if request.method in ("POST", "PUT", "DELETE", "PATCH"):
         origin = request.headers.get("origin")
-        if origin and origin.split("://", 1)[-1] != request.headers.get("host"):
+        if origin and origin.rstrip("/") not in config.ON_YUZ and origin.split("://", 1)[-1] != request.headers.get("host"):
             return JSONResponse({"hata": "Geçersiz istek kaynağı."}, status_code=403)
         cl = request.headers.get("content-length")
         if cl and cl.isdigit() and int(cl) > config.MAX_DOSYA * max(config.MAX_MANKEN, config.MAX_GOMLEK) + (1 << 20):
@@ -65,6 +66,11 @@ async def guvenlik(request: Request, call_next):
     r.headers.setdefault("X-Frame-Options", "DENY")
     r.headers.setdefault("Referrer-Policy", "same-origin")
     return r
+
+
+# CORS en dista olmali (hata yanitlarina da baslik eklensin): son eklenen = en dis katman
+app.add_middleware(CORSMiddleware, allow_origins=config.ON_YUZ, allow_credentials=True,
+                   allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Content-Type"], max_age=600)
 
 
 # ----------------------------------------------------------------------------- oturum
@@ -226,9 +232,5 @@ async def zip_indir(iid: str):
     return FileResponse(yol, media_type="application/zip", filename="laq-sonuc.zip")
 
 
-@app.get("/")
-async def ana():
-    return FileResponse(config.KOK / "static" / "index.html", headers={"Cache-Control": "no-cache"})
-
-
-app.mount("/static", StaticFiles(directory=config.KOK / "static"), name="static")
+# arayuz de bu sunucudan acilabilir (GitHub Pages kullanilmazsa); API yollari yukarida oncelikli
+app.mount("/", StaticFiles(directory=config.KOK / "static", html=True), name="static")

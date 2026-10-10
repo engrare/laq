@@ -1,11 +1,13 @@
 "use strict";
+// API adresi: static/config.js (window.LAQ_API). Bos = arayuz ile ayni sunucu.
+const API = (window.LAQ_API || "").replace(/\/$/, "");
 const $ = (s) => document.querySelector(s);
 let IS = null;          // sunucudaki is durumu
 let LIMIT = {};
 let zamanlayici = null;
 
 async function api(yol, secenek = {}) {
-  const r = await fetch(yol, { credentials: "same-origin", ...secenek });
+  const r = await fetch(API + yol, { credentials: "include", ...secenek });
   if (r.status === 401 && !yol.endsWith("/giris")) { goster("giris"); throw new Error("Giriş gerekli"); }
   let veri = null;
   try { veri = await r.json(); } catch (_) { /* json degil */ }
@@ -76,7 +78,7 @@ function kart(tur, k, tiklaninca) {
   const d = document.createElement("div");
   d.className = "kart";
   const img = document.createElement("img");
-  img.src = `/api/is/${IS.id}/${tur}/${k.id}/temel.jpg`;
+  img.src = `${API}/api/is/${IS.id}/${tur}/${k.id}/temel.jpg`;
   img.loading = "lazy";
   const ad = document.createElement("div"); ad.className = "ad"; ad.textContent = k.ad;
   const r = document.createElement("span"); r.className = "rozet " + k.durum; r.textContent = DURUM[k.durum] || k.durum;
@@ -101,7 +103,7 @@ function ciz() {
   for (const k of IS.manken) {
     const c = kart("manken", k); c.append(silDugmesi("manken", k)); m.append(c);
     const mc = kart("manken", k, () => editorAc(k.id));
-    if (k.durum === "hazir") mc.querySelector("img").src = `/api/is/${IS.id}/manken/${k.id}/tarali.jpg?v=${k.v}`;
+    if (k.durum === "hazir") mc.querySelector("img").src = `${API}/api/is/${IS.id}/manken/${k.id}/tarali.jpg?v=${k.v}`;
     mk.append(mc);
   }
   for (const k of IS.gomlek) { const c = kart("gomlek", k); c.append(silDugmesi("gomlek", k)); g.append(c); }
@@ -114,7 +116,7 @@ function ciz() {
   $("#bar").max = Math.max(1, u.toplam); $("#bar").value = u.adim;
   $("#ilerlemeYazi").textContent = `${u.mesaj || ""} ${u.toplam ? `(${u.adim}/${u.toplam})` : ""}`;
   $("#indirSatir").hidden = !u.zip;
-  $("#indir").href = `/api/is/${IS.id}/zip`;
+  $("#indir").href = `${API}/api/is/${IS.id}/zip`;
   if (u.durum === "hata") mesaj(u.mesaj);
 }
 $("#uret").onclick = async () => {
@@ -145,7 +147,7 @@ async function editorAc(mid) {
   if (!m || m.durum === "bekliyor" || m.durum === "hesaplaniyor") { mesaj("Bu fotoğrafın maskesi henüz hesaplanıyor, birkaç saniye bekleyin."); return; }
   if (["kuyrukta", "calisiyor"].includes(IS.uret.durum)) { mesaj("Üretim sürerken düzenlenemez."); return; }
   ed.id = mid; ed.w = m.w; ed.h = m.h; ed.geri = []; ed.orijinal = false; ed.bekliyor = false;
-  const bin = await fetch(`/api/is/${IS.id}/manken/${mid}/duzeltme.bin`, { credentials: "same-origin", cache: "no-store" });
+  const bin = await fetch(`${API}/api/is/${IS.id}/manken/${mid}/duzeltme.bin`, { credentials: "include", cache: "no-store" });
   ed.labels = new Uint8Array(await bin.arrayBuffer());
   if (ed.labels.length !== ed.w * ed.h) ed.labels = new Uint8Array(ed.w * ed.h);
   ed.dugme = JSON.parse(JSON.stringify(m.dugme || []));
@@ -159,7 +161,7 @@ async function editorAc(mid) {
   sigdir(); dugmeCiz(); modSec("ekle"); edDurum("");
 }
 function resimYukle(m) {
-  edImg.src = ed.orijinal ? `/api/is/${IS.id}/manken/${m.id}/temel.jpg` : `/api/is/${IS.id}/manken/${m.id}/tarali.jpg?v=${m.v}`;
+  edImg.src = ed.orijinal ? `${API}/api/is/${IS.id}/manken/${m.id}/temel.jpg` : `${API}/api/is/${IS.id}/manken/${m.id}/tarali.jpg?v=${m.v}`;
   $("#goster").textContent = ed.orijinal ? "Taralı" : "Orijinal";
 }
 function sigdir() {

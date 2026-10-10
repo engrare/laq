@@ -5,6 +5,10 @@ from pathlib import Path
 KOK = Path(__file__).resolve().parent.parent
 PAROLA = os.environ.get("LAQ_PAROLA", "")
 VERI = Path(os.environ.get("LAQ_VERI", KOK / "data")).resolve()
+# Drive: ayri klasor (uygulama kodundan ve is verisinden bagimsiz); yuklenen fotograflar ve sonuclar burada kalir
+DRIVE = Path(os.environ.get("LAQ_DRIVE", "/mnt/hdd/drive/laq-drive")).resolve()
+DRIVE_MAX_DOSYA = int(float(os.environ.get("LAQ_DRIVE_MAX_DOSYA_MB", "40")) * 1024 * 1024)
+DRIVE_BOS_MIN_GB = float(os.environ.get("LAQ_DRIVE_BOS_MIN_GB", "5"))
 SAKLA_GUN = float(os.environ.get("LAQ_SAKLA_GUN", "7"))
 MAX_DOSYA = int(float(os.environ.get("LAQ_MAX_DOSYA_MB", "15")) * 1024 * 1024)
 MAX_MANKEN = int(os.environ.get("LAQ_MAX_MANKEN", "12"))

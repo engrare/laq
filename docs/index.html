@@ -19,14 +19,45 @@
 <main id="uygulama" hidden>
   <header>
     <h1>LAQ</h1>
+    <nav>
+      <button id="nDrive" class="sekme">Drive</button>
+      <button id="nIs" class="sekme">Boyama <span id="nRozet"></span></button>
+    </nav>
     <span class="bosluk"></span>
     <button id="yeniIs" class="ikincil">Yeni iş</button>
     <button id="cikis" class="ikincil">Çıkış</button>
   </header>
   <p id="mesaj" class="mesaj" hidden></p>
 
+  <section id="gDrive" hidden>
+    <div class="adim">
+      <div class="dararac">
+        <button id="dUst" class="ikincil" title="Üst klasör">⬆</button>
+        <span id="dYol" class="dyol"></span>
+        <button id="dTumu" class="ikincil">Tümünü seç</button>
+        <button id="dKlasor" class="ikincil">+ Klasör</button>
+        <label class="dugme">Yükle<input type="file" id="dDosya" accept="image/jpeg,image/png,image/webp" multiple hidden></label>
+      </div>
+      <div id="dGrid" class="dgrid"></div>
+      <p class="ipucu" id="dBilgi"></p>
+    </div>
+    <div id="dSecim" class="secim" hidden>
+      <span id="dSayi"></span>
+      <button id="dIndir" class="ikincil">İndir</button>
+      <button id="dManken">Manken olarak ekle</button>
+      <button id="dGomlek">Gömlek olarak ekle</button>
+      <button id="dTasi" class="ikincil">Taşı</button>
+      <button id="dAd" class="ikincil">Adı değiştir</button>
+      <button id="dSil" class="ikincil tehlike">Sil</button>
+      <button id="dVazgec" class="ikincil">Vazgeç</button>
+    </div>
+  </section>
+
+  <div id="gIs" hidden>
   <section class="adim">
-    <h2>1. Fotoğrafları yükle</h2>
+    <h2>1. Fotoğrafları ekle</h2>
+    <p class="ipucu">Drive sekmesinde fotoğrafları (veya klasörü) seçip “Manken/Gömlek olarak ekle” deyin; ya da doğrudan buradan yükleyin.
+      <button id="driveSec" class="ikincil">Drive’dan seç</button></p>
     <div class="iki">
       <div>
         <h3>Manken fotoğrafları</h3>
@@ -52,9 +83,21 @@
     <h2>3. Üret ve indir</h2>
     <button id="uret" disabled>Tüm görselleri üret</button>
     <div id="ilerleme" hidden><progress id="bar" max="1" value="0"></progress> <span id="ilerlemeYazi"></span></div>
-    <p id="indirSatir" hidden><a id="indir" class="dugme" href="#">ZIP indir</a></p>
+    <p id="indirSatir" hidden><a id="indir" class="dugme" href="#">ZIP indir</a>
+      <button id="driveAc" class="ikincil">Drive’da aç</button></p>
   </section>
+  </div>
 </main>
+
+<div id="yuklemeler"></div>
+<div id="onizle" hidden>
+  <img id="onizleImg" alt="">
+  <div class="onizlearac"><span id="onizleAd"></span><a id="onizleIndir" class="dugme" href="#">İndir</a><button id="onizleKapat" class="ikincil">Kapat</button></div>
+</div>
+<div id="tasiPencere" hidden>
+  <div class="kutu"><h3>Taşınacak klasör</h3><select id="tasiSec"></select>
+    <div><button id="tasiTamam">Taşı</button> <button id="tasiIptal" class="ikincil">Vazgeç</button></div></div>
+</div>
 
 <div id="editor" hidden>
   <div id="arac">
@@ -83,5 +126,6 @@
 </div>
 <script src="config.js"></script>
 <script src="app.js"></script>
+<script src="drive.js"></script>
 </body>
 </html>

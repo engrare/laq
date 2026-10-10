@@ -383,6 +383,10 @@ class Isci:
                 sonuc = cv2.resize(sonuc, (gen, round(sonuc.shape[0] * gen / sonuc.shape[1])), interpolation=cv2.INTER_LANCZOS4)
                 cv2.imencode(".jpg", sonuc, [cv2.IMWRITE_JPEG_QUALITY, config.CIKTI_KALITE])[1].tofile(str(out / f"{mk['ad']}_{g['ad']}.jpg"))
                 adim(f"{mk['ad']} × {g['ad']}")
+        from . import drive      # sonuclari Drive'a da yaz: Sonuçlar/<tarih saat>/
+        hedef = drive.sonuc_klasoru()
+        for f in sorted(out.glob("*.jpg")):
+            shutil.copy2(f, hedef / f.name)
         zip_yol = dizin(iid) / "sonuc.zip"
         with zipfile.ZipFile(zip_yol.with_suffix(".tmp"), "w", zipfile.ZIP_STORED) as zf:
             for f in sorted(out.glob("*.jpg")):
@@ -391,6 +395,7 @@ class Isci:
         with KILIT:
             dd = yukle_durum(iid)
             dd["uret"].update(durum="bitti", mesaj="Hazır", zip=True, adim=dd["uret"]["toplam"])
+            dd["drive"] = drive.goreli(hedef)
             kaydet_durum(dd)
 
 

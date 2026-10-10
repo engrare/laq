@@ -5,10 +5,10 @@ Mankenin giydiği gömleği, askıdaki gömlek fotoğrafının rengine boyar. D�
 **Sınırlar:** manken ve askıdaki gömlek AYNI model olmalıdır. Sistem cep ya da düğme eklemez. Otomatik maske çok iyidir ama kusursuz değildir (saç altı, el-kol teması); web arayüzündeki fırça ile elle düzeltilir.
 
 ## Nasıl çalışır
-1. Kullanıcı manken fotoğraflarını ve askıdaki renk fotoğraflarını yükler.
+1. **Drive** sekmesi (Google Drive gibi): fotoğraflar klasörlere yüklenir, seçilir, indirilir, taşınır, silinir. Seçilen fotoğraflar (ya da klasörün içindekiler) "Manken olarak ekle" / "Gömlek olarak ekle" ile bir boyama işine eklenir.
 2. Sunucu her mankenin gömlek maskesini çıkarır (SegFormer-b2-clothes ONNX + GrabCut) ve "taralı" önizleme gösterir (kırmızı = boyanacak, yeşil = korunan düğme).
 3. Tarayıcıda fırça (ekle/çıkar), zoom/pan, geri al ve düğme işaretleme ile maske düzeltilir.
-4. "Üret": her manken × her renk görseli 1080 px genişlikte üretilir, ZIP olarak indirilir.
+4. "Üret": her manken × her renk görseli 1080 px genişlikte üretilir; sonuçlar Drive'da `Sonuçlar/<tarih saat>/` klasörüne yazılır (ZIP de indirilebilir).
 
 Ölçülen süreler (4 çekirdekli AVX2'siz CPU): manken başına maske ≈ 14 sn, askı fotoğrafından renk okuma ≈ 6 sn, yeni renk başına boyama ≈ 0,2 sn.
 
@@ -38,10 +38,13 @@ Arayüz (`static/`) statik dosyalardır; GitHub Pages'te `docs/` klasöründen y
 | `LAQ_SAKLA_GUN` | 7 | Eski işlerin otomatik silinme süresi |
 | `LAQ_MAX_DOSYA_MB` | 15 | Dosya başına boyut sınırı |
 | `LAQ_MAX_MANKEN`, `LAQ_MAX_GOMLEK` | 12, 12 | İş başına fotoğraf sayısı |
+| `LAQ_DRIVE` | `/mnt/hdd/drive/laq-drive` | Drive klasörü (kod ve iş verisinden ayrı; siz silene kadar kalır) |
+| `LAQ_DRIVE_MAX_DOSYA_MB` | 40 | Drive'a yüklenen dosya başına sınır |
+| `LAQ_DRIVE_BOS_MIN_GB` | 5 | Diskte bu kadar yer kalmazsa yükleme reddedilir |
 
 ## Yapı
 - `kod/` – motor: `boya.py` (`hazirla()` manken başına bir kez, `boya()` renk başına), `seg/pipeline.py` (SegFormer, renk okuma). Ayrıntılar: `API.md`.
-- `app/` – FastAPI uygulaması: giriş, tek işçili kuyruk, iş deposu, API.
+- `app/` – FastAPI uygulaması: giriş, tek işçili kuyruk, iş deposu, Drive (`drive.py`), API.
 - `static/` – tarayıcı arayüzü ve fırça editörü (bağımlılıksız JS).
 - `scripts/model_indir.py` – model indirme + sha256.
 

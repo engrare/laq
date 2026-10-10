@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 
 import cv2
 import numpy as np
-from fastapi import Depends, FastAPI, File, Form, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Query, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
@@ -20,6 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import config
+from . import drive
 
 sys.path.insert(0, str(config.KOK / "kod"))     # motor: kod/boya.py, kod/seg/, kod/dugme_isaretle.py
 from . import isler  # noqa: E402
@@ -39,6 +40,7 @@ async def lifespan(app: FastAPI):
     if not config.MODEL.exists():
         raise SystemExit(f"Model yok: {config.MODEL}  ->  python scripts/model_indir.py")
     isler.kok()
+    drive.hazirla()
     isci.baslat()
     threading.Thread(target=isler.temizlik_dongusu, daemon=True).start()
     yield
@@ -126,7 +128,7 @@ async def ben():
 # ----------------------------------------------------------------------------- isler
 def _gorunum(d: dict) -> dict:
     return {"id": d["id"], "manken": d["manken"], "gomlek": [{k: v for k, v in g.items() if k != "lab"} for g in d["gomlek"]],
-            "uret": d["uret"], "kuyruk": isler.KUYRUK.qsize()}
+            "uret": d["uret"], "drive": d.get("drive"), "kuyruk": isler.KUYRUK.qsize()}
 
 
 @app.post("/api/is", dependencies=[Depends(oturum)])
@@ -165,6 +167,19 @@ async def manken_yukle(iid: str, dosyalar: list[UploadFile] = File(...)):
 @app.post("/api/is/{iid}/gomlek", dependencies=[Depends(oturum)])
 async def gomlek_yukle(iid: str, dosyalar: list[UploadFile] = File(...)):
     return await _yukle(iid, "gomlek", dosyalar)
+
+
+@app.post("/api/is/{iid}/{tur}/drive", dependencies=[Depends(oturum)])
+async def drivedan_ekle(iid: str, tur: str, yol: list[str] = Query()):
+    """Drive'daki fotograflari (veya klasorlerin icindekileri) ise ekler."""
+    if tur not in ("manken", "gomlek"):
+        raise Hata(404, "Bulunamadı.")
+    dosyalar = await run_in_threadpool(drive.resimler, yol)
+    if not dosyalar:
+        raise Hata(422, "Seçimde fotoğraf yok.")
+    veri = [(p.name, await run_in_threadpool(p.read_bytes)) for p in dosyalar]
+    await run_in_threadpool(isler.foto_ekle, iid, tur, veri)
+    return _gorunum(isler.yukle_durum(iid))
 
 
 @app.delete("/api/is/{iid}/{tur}/{kid}", dependencies=[Depends(oturum)])
@@ -230,6 +245,9 @@ async def zip_indir(iid: str):
     if not d["uret"]["zip"] or not yol.exists():
         raise Hata(404, "ZIP henüz hazır değil.")
     return FileResponse(yol, media_type="application/zip", filename="laq-sonuc.zip")
+
+
+app.include_router(drive.router, dependencies=[Depends(oturum)])
 
 
 # arayuz de bu sunucudan acilabilir (GitHub Pages kullanilmazsa); API yollari yukarida oncelikli

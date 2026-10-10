@@ -37,6 +37,7 @@ async function baslat() {
   if (kayitli) { try { IS = await api("/api/is/" + kayitli); } catch (_) { IS = null; } }
   if (!IS) await yeniIs();
   ciz(); zamanla();
+  gorunumSec(localStorage.getItem("laq_gorunum") === "is" ? "is" : "drive");
 }
 async function yeniIs() {
   IS = await api("/api/is", { method: "POST" });
@@ -107,6 +108,8 @@ function ciz() {
     mk.append(mc);
   }
   for (const k of IS.gomlek) { const c = kart("gomlek", k); c.append(silDugmesi("gomlek", k)); g.append(c); }
+  $("#nRozet").textContent = IS.manken.length || IS.gomlek.length ? `(${IS.manken.length}+${IS.gomlek.length})` : "";
+  $("#driveAc").hidden = !IS.drive;
   const calisiyor = ["kuyrukta", "calisiyor"].includes(IS.uret.durum);
   const bekleyen = [...IS.manken, ...IS.gomlek].some((k) => k.durum === "bekliyor" || k.durum === "hesaplaniyor");
   $("#uret").disabled = calisiyor || !IS.manken.length || !IS.gomlek.length;

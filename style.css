@@ -36,7 +36,7 @@ progress{width:min(380px,70%);height:16px;vertical-align:middle}
 #arac{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;background:#1d2733;color:#fff;font-size:14px}
 #arac button{padding:6px 10px}
 #arac .mod{background:#374151}#arac .mod.aktif{background:#2563eb}
-#arac label{display:flex;align-items:center;gap:4px}#arac input[type=range]{width:90px}
+#arac label{display:flex;align-items:center;gap:4px}#arac input[type=range]{width:min(320px,45vw)}
 #gorus{position:relative;flex:1;overflow:hidden;touch-action:none;cursor:crosshair}
 #sahne{position:absolute;left:0;top:0;transform-origin:0 0}
 #sahne img,#sahne canvas{position:absolute;left:0;top:0;width:100%;height:100%;image-rendering:auto;user-select:none}

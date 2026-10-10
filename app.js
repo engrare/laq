@@ -162,6 +162,7 @@ async function editorAc(mid) {
   resimYukle(m);
   $("#editor").hidden = false; document.body.style.overflow = "hidden";
   sigdir(); dugmeCiz(); modSec("ekle"); edDurum("");
+  $("#kaydet").disabled = false; kaydetEtiket();
 }
 function resimYukle(m) {
   edImg.src = ed.orijinal ? `${API}/api/is/${IS.id}/manken/${m.id}/temel.jpg` : `${API}/api/is/${IS.id}/manken/${m.id}/tarali.jpg?v=${m.v}`;
@@ -175,6 +176,8 @@ function sigdir() {
 }
 function donustur() { sahne.style.transform = `translate(${ed.tx}px,${ed.ty}px) scale(${ed.olcek})`; }
 function edDurum(t) { $("#edDurum").textContent = t; }
+function hesapSuruyor() { return IS.manken.some((k) => k.durum === "bekliyor" || k.durum === "hesaplaniyor"); }
+function kaydetEtiket() { $("#kaydet").textContent = hesapSuruyor() ? "Kaydet ve yeniden hesaplamayı sıraya ekle" : "Kaydet ve yeniden hesapla"; }
 
 function boyaPiksel(i) {
   const v = ed.labels[i], d = ed.imgData.data, j = i * 4;
@@ -319,7 +322,7 @@ window.addEventListener("resize", () => { if (!$("#editor").hidden) sigdir(); })
 window.addEventListener("keydown", (e) => {
   if ($("#editor").hidden) return;
   if ((e.key === "z" || e.key === "Z") && !e.target.matches("input")) $("#geri").click();
-  if (e.key === "[") { $("#boyut").value = Math.max(2, fircaYaricap() - 2); halkaGuncelle(); }
+  if (e.key === "[") { $("#boyut").value = Math.max(1, fircaYaricap() - 2); halkaGuncelle(); }
   if (e.key === "]") { $("#boyut").value = Math.min(60, fircaYaricap() + 2); halkaGuncelle(); }
 });
 
@@ -328,20 +331,24 @@ $("#kaydet").onclick = async () => {
   const fd = new FormData();
   fd.append("duzelt", new Blob([ed.labels]), "duzelt.bin");
   fd.append("dugme", JSON.stringify(ed.dugme));
+  const sirada = hesapSuruyor(), kid = ed.id;
   $("#kaydet").disabled = true; edDurum("Gönderiliyor…");
   try {
-    IS = await api(`/api/is/${IS.id}/manken/${ed.id}/duzeltme`, { method: "PUT", body: fd });
-    ed.geri = []; ed.bekliyor = true; edDurum("Hesaplanıyor (≈15 sn)…"); zamanla();
-  } catch (e) { edDurum(e.message); $("#kaydet").disabled = false; }
+    IS = await api(`/api/is/${IS.id}/manken/${kid}/duzeltme`, { method: "PUT", body: fd });
+    if (ed.id === kid) { ed.geri = []; ed.bekliyor = true; edDurum(sirada ? "Sıraya eklendi, hesaplanınca güncellenecek…" : "Hesaplanıyor (≈15 sn)…"); }
+    zamanla();
+  } catch (e) { edDurum(e.message); }
+  $("#kaydet").disabled = false; kaydetEtiket();
 };
 function editorGuncelle() {
+  kaydetEtiket();
   if (!ed.bekliyor || $("#editor").hidden) return;
   const m = IS.manken.find((k) => k.id === ed.id);
   if (!m) return;
   if (m.durum === "hazir") {
-    ed.bekliyor = false; $("#kaydet").disabled = false; edDurum("Güncellendi ✓");
+    ed.bekliyor = false; edDurum("Güncellendi ✓");
     ed.orijinal = false; resimYukle(m); dugmeCiz();
-  } else if (m.durum === "hata") { ed.bekliyor = false; $("#kaydet").disabled = false; edDurum("Hata: " + (m.hata || "")); }
+  } else if (m.durum === "hata") { ed.bekliyor = false; edDurum("Hata: " + (m.hata || "")); }
 }
 
 baslat();

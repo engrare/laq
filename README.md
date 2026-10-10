@@ -45,7 +45,7 @@ Arayüz (`static/`) statik dosyalardır; GitHub Pages'te `docs/` klasöründen y
 ## Yapı
 - `kod/` – motor: `boya.py` (`hazirla()` manken başına bir kez, `boya()` renk başına), `seg/pipeline.py` (SegFormer, renk okuma). Ayrıntılar: `API.md`.
 - `app/` – FastAPI uygulaması: giriş, tek işçili kuyruk, iş deposu, Drive (`drive.py`), API.
-- `static/` – tarayıcı arayüzü ve fırça editörü (bağımlılıksız JS).
+- `index.html`, `app.js`, `drive.js`, `style.css` (kökte; özel repoda `static/`) – tarayıcı arayüzü ve fırça editörü (bağımlılıksız JS).
 - `scripts/model_indir.py` – model indirme + sha256.
 
 ## Lisans uyarısı

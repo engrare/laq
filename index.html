@@ -5,7 +5,7 @@
 <script>if (location.protocol === "http:" && location.hostname.endsWith("engrare.com")) location.replace("https:" + location.href.slice(5));</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>LAQ – Gömlek renklendirme</title>
-<link rel="stylesheet" href="style.css?v=4afdb92e">
+<link rel="stylesheet" href="style.css?v=4479bb45">
 </head>
 <body>
 <section id="giris" hidden>
@@ -20,19 +20,27 @@
 <main id="uygulama" hidden>
   <header>
     <h1>LAQ</h1>
-    <nav>
-      <button id="nDrive" class="sekme">Drive</button>
-      <button id="nIs" class="sekme">Boyama <span id="nRozet"></span></button>
-    </nav>
+    <nav><button id="nProjeler" class="sekme">Projeler</button></nav>
     <span class="bosluk"></span>
-    <button id="yeniIs" class="ikincil">Yeni iş</button>
     <button id="cikis" class="ikincil">Çıkış</button>
   </header>
   <p id="mesaj" class="mesaj" hidden></p>
 
+  <section id="gProjeler" hidden>
+    <div class="adim">
+      <div class="dararac">
+        <h2 class="bosluk">Projeler</h2>
+        <button id="yeniProje">+ Yeni proje</button>
+      </div>
+      <div id="pGrid" class="dgrid"></div>
+      <p class="ipucu" id="pBilgi"></p>
+    </div>
+  </section>
+
   <section id="gDrive" hidden>
     <div class="adim">
       <div class="dararac">
+        <button id="dProjeler" class="ikincil">← Projeler</button>
         <button id="dUst" class="ikincil" title="Üst klasör">⬆</button>
         <span id="dYol" class="dyol"></span>
         <button id="dTumu" class="ikincil">Tümünü seç</button>
@@ -55,10 +63,13 @@
   </section>
 
   <div id="gIs" hidden>
+  <div class="projebar">
+    <button id="pGeri" class="ikincil">← Projeler</button>
+    <h2 id="pAd"></h2>
+    <button id="pAdDegistir" class="ikincil">Adı değiştir</button>
+  </div>
   <section class="adim">
     <h2>1. Fotoğrafları ekle</h2>
-    <p class="ipucu">Drive sekmesinde fotoğrafları (veya klasörü) seçip “Manken/Gömlek olarak ekle” deyin; ya da doğrudan buradan yükleyin.
-      <button id="driveSec" class="ikincil">Drive’dan seç</button></p>
     <div class="iki">
       <div>
         <h3>Manken fotoğrafları</h3>
@@ -84,8 +95,9 @@
     <h2>3. Üret ve indir</h2>
     <button id="uret" disabled>Tüm görselleri üret</button>
     <div id="ilerleme" hidden><progress id="bar" max="1" value="0"></progress> <span id="ilerlemeYazi"></span></div>
-    <p id="indirSatir" hidden><a id="indir" class="dugme" href="#">ZIP indir</a>
-      <button id="driveAc" class="ikincil">Drive’da aç</button></p>
+    <p id="indirSatir" hidden><a id="indir" class="dugme" href="#">ZIP indir</a></p>
+    <div id="ciktilar" class="maskeler"></div>
+    <p id="driveYazi" class="ipucu" hidden></p>
   </section>
   </div>
 </main>
@@ -126,7 +138,7 @@
   </div>
 </div>
 <script src="config.js?v=538bf2dd"></script>
-<script src="app.js?v=ee9db0a3"></script>
-<script src="drive.js?v=57103e75"></script>
+<script src="app.js?v=f26c111c"></script>
+<script src="drive.js?v=aa448ab2"></script>
 </body>
 </html>

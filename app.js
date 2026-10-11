@@ -32,22 +32,78 @@ $("#cikis").onclick = async () => { await api("/api/cikis", { method: "POST" });
 async function baslat() {
   try { const b = await api("/api/ben"); LIMIT = b.limit; } catch (_) { return; }
   goster("uygulama");
-  $("#limitBilgi").textContent = `En fazla ${LIMIT.manken} manken, ${LIMIT.gomlek} gömlek; dosya başına ${LIMIT.dosya_mb} MB. İşler ${LIMIT.sakla_gun} gün sonra otomatik silinir.`;
-  const kayitli = localStorage.getItem("laq_is");
-  if (kayitli) { try { IS = await api("/api/is/" + kayitli); } catch (_) { IS = null; } }
-  if (!IS) await yeniIs();
+  $("#limitBilgi").textContent = `En fazla ${LIMIT.manken} manken, ${LIMIT.gomlek} gömlek; dosya başına ${LIMIT.dosya_mb} MB. Projeler siz silene kadar saklanır.`;
+  yonlendir();
+}
+
+// ------------------------------------------------------------------ gorunumler: #  = projeler, #p/<id> = proje, #drive = gizli drive
+function gorunumSec(ad) {
+  $("#gProjeler").hidden = ad !== "projeler";
+  $("#gIs").hidden = ad !== "is";
+  $("#gDrive").hidden = ad !== "drive";
+  $("#nProjeler").classList.toggle("aktif", ad !== "drive");
+  if (!$("#editor").hidden) { $("#editor").hidden = true; document.body.style.overflow = ""; ed.id = null; }
+  if (ad === "drive") driveAc(D.yol).catch(() => driveAc(""));
+}
+function yonlendir() {
+  const h = location.hash.slice(1);
+  if (h === "drive") return gorunumSec("drive");
+  if (h.startsWith("p/")) return projeAc(h.slice(2));
+  return projelerAc();
+}
+window.addEventListener("hashchange", yonlendir);
+$("#nProjeler").onclick = $("#pGeri").onclick = $("#dProjeler").onclick = () => { if (location.hash) location.hash = ""; else yonlendir(); };
+
+const TARIH = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+async function projelerAc() {
+  clearTimeout(zamanlayici); IS = null; mesaj("");
+  gorunumSec("projeler");
+  let liste;
+  try { liste = (await api("/api/is")).projeler; } catch (e) { mesaj(e.message); return; }
+  const g = $("#pGrid");
+  g.replaceChildren();
+  for (const p of liste) {
+    const c = el("div", "pkart");
+    const ac = () => { location.hash = "p/" + p.id; };
+    const on = el("div", "on", p.kapak ? "" : "👕"); on.onclick = ac;
+    if (p.kapak) {
+      const img = el("img"); img.loading = "lazy"; img.alt = "";
+      img.src = `${API}/api/is/${p.id}/manken/${p.kapak}/temel.jpg`;
+      img.onerror = () => { img.remove(); on.textContent = "👕"; };
+      on.append(img);
+    }
+    const ad = el("div", "ad", p.ad); ad.onclick = ac;
+    const sil = el("button", "sil", "×"); sil.title = "Projeyi sil";
+    sil.onclick = async () => {
+      if (!confirm(`“${p.ad}” projesi silinsin mi? Fotoğraflar, maskeler ve düzeltmeler gider. (Drive’a kaydedilmiş çıktılar kalır.)`)) return;
+      try { await api("/api/is/" + p.id, { method: "DELETE" }); projelerAc(); } catch (e) { mesaj(e.message); }
+    };
+    const durum = p.uret === "bitti" && p.sonuc ? " · çıktı hazır" : ["kuyrukta", "calisiyor"].includes(p.uret) ? " · üretiliyor…" : "";
+    c.append(on, ad, el("div", "bil", `${p.manken} manken, ${p.gomlek} gömlek${durum}`), el("div", "bil", TARIH.format(new Date(p.guncelleme * 1000))), sil);
+    g.append(c);
+  }
+  if (!liste.length) g.append(el("div", "dbos", "Henüz proje yok — “+ Yeni proje” ile başlayın."));
+}
+async function projeAc(id) {
+  clearTimeout(zamanlayici); mesaj("");
+  try { IS = await api("/api/is/" + id); }
+  catch (e) { location.hash = ""; await projelerAc(); mesaj(e.message); return; }
+  gorunumSec("is");
   ciz(); zamanla();
-  gorunumSec(localStorage.getItem("laq_gorunum") === "is" ? "is" : "drive");
 }
-async function yeniIs() {
-  IS = await api("/api/is", { method: "POST" });
-  localStorage.setItem("laq_is", IS.id);
-  ciz();
-}
-$("#yeniIs").onclick = async () => {
-  if (IS && (IS.manken.length || IS.gomlek.length) && !confirm("Mevcut işi bırakıp yeni iş başlatılsın mı? (Eski iş sunucuda silinir.)")) return;
-  if (IS) { try { await api("/api/is/" + IS.id, { method: "DELETE" }); } catch (_) { /* yok say */ } }
-  await yeniIs(); mesaj("");
+$("#yeniProje").onclick = async () => {
+  const ad = prompt("Yeni proje adı:", "");
+  if (ad === null) return;
+  try {
+    const p = await api("/api/is", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ad: ad.trim() || null }) });
+    location.hash = "p/" + p.id;
+  } catch (e) { mesaj(e.message); }
+};
+$("#pAdDegistir").onclick = async () => {
+  const ad = prompt("Proje adı:", IS.ad);
+  if (!ad || ad.trim() === IS.ad) return;
+  try { IS = await api(`/api/is/${IS.id}/ad`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ad }) }); ciz(); }
+  catch (e) { mesaj(e.message); }
 };
 
 // ------------------------------------------------------------------ yukleme
@@ -63,12 +119,16 @@ suruklePanel($("#gYukle"), "gomlek");
 
 async function yukle(tur, dosyalar) {
   dosyalar = dosyalar.filter((f) => f.type.startsWith("image/"));
+  const id = IS.id;
   for (let i = 0; i < dosyalar.length; i++) {
     mesaj(`Yükleniyor: ${i + 1}/${dosyalar.length} (${dosyalar[i].name})`);
     const fd = new FormData();
     fd.append("dosyalar", dosyalar[i]);
-    try { IS = await api(`/api/is/${IS.id}/${tur}`, { method: "POST", body: fd }); ciz(); }
-    catch (e) { mesaj(e.message); return; }
+    try {
+      const yeni = await api(`/api/is/${id}/${tur}`, { method: "POST", body: fd });
+      if (!IS || IS.id !== id) return;   // yukleme sirasinda baska projeye gecildi
+      IS = yeni; ciz();
+    } catch (e) { mesaj(e.message); return; }
   }
   mesaj(""); zamanla();
 }
@@ -108,8 +168,7 @@ function ciz() {
     mk.append(mc);
   }
   for (const k of IS.gomlek) { const c = kart("gomlek", k); c.append(silDugmesi("gomlek", k)); g.append(c); }
-  $("#nRozet").textContent = IS.manken.length || IS.gomlek.length ? `(${IS.manken.length}+${IS.gomlek.length})` : "";
-  $("#driveAc").hidden = !IS.drive;
+  $("#pAd").textContent = IS.ad;
   const calisiyor = ["kuyrukta", "calisiyor"].includes(IS.uret.durum);
   const bekleyen = [...IS.manken, ...IS.gomlek].some((k) => k.durum === "bekliyor" || k.durum === "hesaplaniyor");
   $("#uret").disabled = calisiyor || !IS.manken.length || !IS.gomlek.length;
@@ -120,6 +179,21 @@ function ciz() {
   $("#ilerlemeYazi").textContent = `${u.mesaj || ""} ${u.toplam ? `(${u.adim}/${u.toplam})` : ""}`;
   $("#indirSatir").hidden = !u.zip;
   $("#indir").href = `${API}/api/is/${IS.id}/zip`;
+  const cikti = $("#ciktilar");
+  cikti.replaceChildren();
+  if (u.zip) for (const ad of u.cikti || []) {
+    const c = el("div", "kart cikti");
+    const img = el("img"); img.loading = "lazy"; img.alt = ad;
+    img.src = `${API}/api/is/${IS.id}/cikti/${ad}`;
+    img.onclick = () => {
+      $("#onizleImg").src = img.src; $("#onizleAd").textContent = ad;
+      $("#onizleIndir").href = `${img.src}?indir=1`; $("#onizle").hidden = false;
+    };
+    c.append(img, el("div", "ad", ad.replace(/\.jpg$/, "")));
+    cikti.append(c);
+  }
+  $("#driveYazi").hidden = !(u.zip && IS.drive);
+  $("#driveYazi").textContent = `Çıktılar Drive’a da kaydedildi: ${IS.drive}`;
   if (u.durum === "hata") mesaj(u.mesaj);
 }
 $("#uret").onclick = async () => {
@@ -130,10 +204,13 @@ function zamanla() {
   clearTimeout(zamanlayici);
   const is = IS && ([...IS.manken, ...IS.gomlek].some((k) => k.durum === "bekliyor" || k.durum === "hesaplaniyor") || ["kuyrukta", "calisiyor"].includes(IS.uret.durum));
   if (!is) return;
+  const id = IS.id;
   zamanlayici = setTimeout(async () => {
     try {
       const onceki = JSON.stringify(IS);
-      IS = await api("/api/is/" + IS.id);
+      const yeni = await api("/api/is/" + id);
+      if (!IS || IS.id !== id) return;   // baska projeye / listeye gecildi
+      IS = yeni;
       if (JSON.stringify(IS) !== onceki) { if ($("#editor").hidden) ciz(); editorGuncelle(); }
     } catch (_) { /* gecici ag hatasi */ }
     zamanla();

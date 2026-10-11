@@ -24,6 +24,8 @@ from . import config
 log = logging.getLogger("laq")
 ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,32}$")
 KALEM_RE = re.compile(r"^[mg]\d{1,3}$")
+CIKTI_RE = re.compile(r"^[A-Za-z0-9_-]+\.jpg$")
+VARSAYILAN_AD = "Adsız proje"
 KILIT = threading.RLock()
 KUYRUK: "queue.Queue[tuple]" = queue.Queue()
 UZANTI = {"JPEG": ".jpg", "PNG": ".png", "WEBP": ".webp"}
@@ -52,7 +54,7 @@ def yukle_durum(iid: str) -> dict:
     f = dizin(iid) / "durum.json"
     with KILIT:
         if not f.exists():
-            raise Hata(404, "İş bulunamadı (süresi dolmuş olabilir).")
+            raise Hata(404, "Proje bulunamadı.")
         return json.loads(f.read_text())
 
 
@@ -64,10 +66,21 @@ def kaydet_durum(d: dict):
         tmp.replace(f)
 
 
-def yeni_is() -> dict:
+def ad_temizle(ad: str | None) -> str:
+    ad = " ".join((ad or "").split())
+    if not ad:
+        raise Hata(422, "Proje adı boş olamaz.")
+    if len(ad) > 80 or re.search(r"[\x00-\x1f\x7f]", ad):
+        raise Hata(422, "Proje adı geçersiz (en fazla 80 karakter).")
+    return ad
+
+
+def yeni_is(ad: str | None = None) -> dict:
     iid = secrets.token_urlsafe(12)
-    d = {"id": iid, "olusturma": time.time(), "manken": [], "gomlek": [], "sayac": {"m": 0, "g": 0},
-         "uret": {"durum": "yok", "adim": 0, "toplam": 0, "mesaj": "", "zip": False}}
+    simdi = time.time()
+    d = {"id": iid, "ad": ad_temizle(ad) if ad else time.strftime("Proje %d.%m.%Y %H.%M"), "olusturma": simdi, "guncelleme": simdi,
+         "manken": [], "gomlek": [], "sayac": {"m": 0, "g": 0},
+         "uret": {"durum": "yok", "adim": 0, "toplam": 0, "mesaj": "", "zip": False, "cikti": []}}
     for alt in ("m", "g", "out"):
         (dizin(iid) / alt).mkdir(parents=True, exist_ok=True)
     kaydet_durum(d)
@@ -79,13 +92,33 @@ def sil_is(iid: str):
         shutil.rmtree(dizin(iid), ignore_errors=True)
 
 
-def dokun(iid: str):
-    f = dizin(iid) / "durum.json"
-    try:
-        if time.time() - f.stat().st_mtime > 3600:
-            os.utime(f)
-    except OSError:
-        pass
+def adlandir(iid: str, ad: str) -> dict:
+    ad = ad_temizle(ad)
+    with KILIT:
+        d = yukle_durum(iid)
+        d.update(ad=ad, guncelleme=time.time())
+        kaydet_durum(d)
+    return d
+
+
+def ozet(d: dict) -> dict:
+    """Proje listesi satiri."""
+    return {"id": d["id"], "ad": d.get("ad") or VARSAYILAN_AD, "olusturma": d["olusturma"],
+            "guncelleme": d.get("guncelleme", d["olusturma"]), "manken": len(d["manken"]), "gomlek": len(d["gomlek"]),
+            "kapak": d["manken"][0]["id"] if d["manken"] else None, "uret": d["uret"]["durum"], "sonuc": bool(d["uret"]["zip"])}
+
+
+def liste() -> list[dict]:
+    """Tum projeler, en son kullanilan en ustte."""
+    out = []
+    for p in kok().iterdir():
+        if not (p.is_dir() and ID_RE.match(p.name)):
+            continue
+        try:
+            out.append(ozet(yukle_durum(p.name)))
+        except (Hata, ValueError, KeyError):
+            continue
+    return sorted(out, key=lambda o: o["guncelleme"], reverse=True)
 
 
 def bul(d: dict, tur: str, kid: str) -> dict:
@@ -148,6 +181,7 @@ def foto_ekle(iid: str, tur: str, dosyalar: list[tuple[str, bytes]]) -> list[dic
                 k.update(hex=None, lab=None)
             d[tur].append(k)
             eklenen.append(k)
+        d["guncelleme"] = time.time()
         kaydet_durum(d)
     for k in eklenen:
         KUYRUK.put(("hazirla" if tur == "manken" else "renk", iid, k["id"]))
@@ -163,6 +197,7 @@ def foto_sil(iid: str, tur: str, kid: str):
         k = bul(d, tur, kid)
         d[tur].remove(k)
         d["uret"].update(zip=False)
+        d["guncelleme"] = time.time()
         for f in (dizin(iid) / kisa).glob(f"{kid}.*"):
             f.unlink(missing_ok=True)
         kaydet_durum(d)
@@ -203,6 +238,7 @@ def duzeltme_kaydet(iid: str, mid: str, ham: bytes, dugme_json: str):
             yol.unlink(missing_ok=True)
         m.update(dugme=temiz, duzeltme=bool(a.any()), durum="bekliyor", hata=None, istek=m["istek"] + 1)
         d["uret"].update(zip=False)
+        d["guncelleme"] = time.time()
         kaydet_durum(d)
     KUYRUK.put(("hazirla", iid, mid))
 
@@ -214,7 +250,8 @@ def uret_baslat(iid: str):
             raise Hata(422, "En az bir manken ve bir gömlek fotoğrafı gerekli.")
         if d["uret"]["durum"] in ("kuyrukta", "calisiyor"):
             raise Hata(409, "Üretim zaten sürüyor.")
-        d["uret"] = {"durum": "kuyrukta", "adim": 0, "toplam": 0, "mesaj": "Sırada…", "zip": False}
+        d["uret"] = {"durum": "kuyrukta", "adim": 0, "toplam": 0, "mesaj": "Sırada…", "zip": False, "cikti": []}
+        d["guncelleme"] = time.time()
         kaydet_durum(d)
     KUYRUK.put(("uret", iid, ""))
 
@@ -388,7 +425,7 @@ class Isci:
                 cv2.imencode(".jpg", sonuc, [cv2.IMWRITE_JPEG_QUALITY, config.CIKTI_KALITE])[1].tofile(str(out / f"{mk['ad']}_{g['ad']}.jpg"))
                 adim(f"{mk['ad']} × {g['ad']}")
         from . import drive      # sonuclari Drive'a da yaz: Sonuçlar/<tarih saat>/
-        hedef = drive.sonuc_klasoru()
+        hedef = drive.sonuc_klasoru(d.get("ad") or VARSAYILAN_AD)
         for f in sorted(out.glob("*.jpg")):
             shutil.copy2(f, hedef / f.name)
         zip_yol = dizin(iid) / "sonuc.zip"
@@ -398,21 +435,8 @@ class Isci:
         zip_yol.with_suffix(".tmp").replace(zip_yol)
         with KILIT:
             dd = yukle_durum(iid)
-            dd["uret"].update(durum="bitti", mesaj="Hazır", zip=True, adim=dd["uret"]["toplam"])
+            dd["uret"].update(durum="bitti", mesaj="Hazır", zip=True, adim=dd["uret"]["toplam"],
+                              cikti=[f.name for f in sorted(out.glob("*.jpg"))])
             dd["drive"] = drive.goreli(hedef)
+            dd["guncelleme"] = time.time()
             kaydet_durum(dd)
-
-
-# ----------------------------------------------------------------------------- temizlik
-def temizlik_dongusu():
-    while True:
-        try:
-            sinir = time.time() - config.SAKLA_GUN * 86400
-            for p in kok().iterdir():
-                f = p / "durum.json"
-                if p.is_dir() and (not f.exists() or f.stat().st_mtime < sinir):
-                    log.info("eski is siliniyor: %s", p.name)
-                    shutil.rmtree(p, ignore_errors=True)
-        except Exception:  # noqa: BLE001
-            log.exception("temizlik hatasi")
-        time.sleep(3600)

@@ -5,7 +5,6 @@ import hashlib
 import hmac
 import logging
 import sys
-import threading
 import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
@@ -35,14 +34,13 @@ _basarisiz: dict[str, list[float]] = defaultdict(list)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if len(config.PAROLA) < 8:
-        raise SystemExit("LAQ_PAROLA ortam değişkeni (en az 8 karakter) tanımlı değil.")
+    if len(config.PAROLA) < 6:
+        raise SystemExit("LAQ_PAROLA ortam değişkeni (en az 6 karakter) tanımlı değil.")
     if not config.MODEL.exists():
         raise SystemExit(f"Model yok: {config.MODEL}  ->  python scripts/model_indir.py")
     isler.kok()
     drive.hazirla()
     isci.baslat()
-    threading.Thread(target=isler.temizlik_dongusu, daemon=True).start()
     yield
 
 
@@ -122,30 +120,47 @@ async def cikis():
 @app.get("/api/ben", dependencies=[Depends(oturum)])
 async def ben():
     return {"tamam": True, "limit": {"manken": config.MAX_MANKEN, "gomlek": config.MAX_GOMLEK,
-                                     "dosya_mb": config.MAX_DOSYA // 1048576, "sakla_gun": config.SAKLA_GUN}}
+                                     "dosya_mb": config.MAX_DOSYA // 1048576}}
 
 
 # ----------------------------------------------------------------------------- isler
 def _gorunum(d: dict) -> dict:
+    if d["uret"]["zip"] and "cikti" not in d["uret"]:   # cikti listesi tutulmadan once uretilmis projeler
+        d["uret"]["cikti"] = sorted(f.name for f in (isler.dizin(d["id"]) / "out").glob("*.jpg"))
     return {"id": d["id"], "manken": d["manken"], "gomlek": [{k: v for k, v in g.items() if k != "lab"} for g in d["gomlek"]],
-            "uret": d["uret"], "drive": d.get("drive"), "kuyruk": isler.KUYRUK.qsize()}
+            "uret": d["uret"], "drive": d.get("drive"), "kuyruk": isler.KUYRUK.qsize(),
+            "ad": d.get("ad") or isler.VARSAYILAN_AD, "guncelleme": d.get("guncelleme", d["olusturma"])}
+
+
+class ProjeAd(BaseModel):
+    ad: str | None = None
+
+
+@app.get("/api/is", dependencies=[Depends(oturum)])
+async def projeler():
+    return {"projeler": await run_in_threadpool(isler.liste)}
 
 
 @app.post("/api/is", dependencies=[Depends(oturum)])
-async def is_olustur():
-    return _gorunum(await run_in_threadpool(isler.yeni_is))
+async def is_olustur(p: ProjeAd | None = None):
+    return _gorunum(await run_in_threadpool(isler.yeni_is, p.ad if p else None))
 
 
 @app.get("/api/is/{iid}", dependencies=[Depends(oturum)])
 async def is_durum(iid: str):
-    d = isler.yukle_durum(iid)
-    isler.dokun(iid)
-    return _gorunum(d)
+    return _gorunum(isler.yukle_durum(iid))
+
+
+@app.put("/api/is/{iid}/ad", dependencies=[Depends(oturum)])
+async def is_adlandir(iid: str, p: ProjeAd):
+    return _gorunum(await run_in_threadpool(isler.adlandir, iid, p.ad or ""))
 
 
 @app.delete("/api/is/{iid}", dependencies=[Depends(oturum)])
 async def is_sil(iid: str):
-    isler.yukle_durum(iid)
+    d = isler.yukle_durum(iid)
+    if d["uret"]["durum"] in ("kuyrukta", "calisiyor"):
+        raise Hata(409, "Üretim sürerken proje silinemez.")
     isler.sil_is(iid)
     return {"tamam": True}
 
@@ -236,6 +251,15 @@ async def duzeltme_koy(iid: str, kid: str, duzelt: UploadFile = File(...), dugme
 async def uret(iid: str):
     await run_in_threadpool(isler.uret_baslat, iid)
     return _gorunum(isler.yukle_durum(iid))
+
+
+@app.get("/api/is/{iid}/cikti/{ad}", dependencies=[Depends(oturum)])
+async def cikti(iid: str, ad: str, indir: int = 0):
+    d = isler.yukle_durum(iid)
+    yol = isler.dizin(iid) / "out" / ad
+    if not isler.CIKTI_RE.match(ad) or not d["uret"]["zip"] or not yol.is_file():
+        raise Hata(404, "Bulunamadı.")
+    return FileResponse(yol, media_type="image/jpeg", filename=ad if indir else None, headers={"Cache-Control": "private, no-cache"})
 
 
 @app.get("/api/is/{iid}/zip", dependencies=[Depends(oturum)])

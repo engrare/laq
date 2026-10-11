@@ -1,5 +1,5 @@
 "use strict";
-// Drive sekmesi: klasor gezme, yukleme, secme, indirme, tasima; secilenleri boyama islerine ekleme.
+// Gizli Drive gorunumu (adres cubugunda "#drive"): klasor gezme, yukleme, secme, indirme, tasima; secilenleri acik projeye ekleme.
 // app.js'ten api(), mesaj(), IS, API, ciz(), zamanla() kullanilir (cagri aninda hazirdirlar).
 const D = { yol: "", veri: null, sec: new Set() };
 const dq = encodeURIComponent;
@@ -14,21 +14,6 @@ function el(tag, cls, text) {
   if (text !== undefined) e.textContent = text;
   return e;
 }
-
-// ------------------------------------------------------------------ sekmeler
-function gorunumSec(ad) {
-  localStorage.setItem("laq_gorunum", ad);
-  $("#gDrive").hidden = ad !== "drive";
-  $("#gIs").hidden = ad !== "is";
-  $("#nDrive").classList.toggle("aktif", ad === "drive");
-  $("#nIs").classList.toggle("aktif", ad === "is");
-  $("#yeniIs").hidden = ad !== "is";
-  if (ad === "drive") driveAc(D.yol).catch(() => driveAc(""));
-}
-$("#nDrive").onclick = () => gorunumSec("drive");
-$("#nIs").onclick = () => gorunumSec("is");
-$("#driveSec").onclick = () => gorunumSec("drive");
-$("#driveAc").onclick = async () => { D.yol = IS.drive || ""; gorunumSec("drive"); };
 
 // ------------------------------------------------------------------ liste
 async function driveAc(yol) {
@@ -78,6 +63,7 @@ function secimCiz() {
   $("#dSecim").hidden = n === 0;
   $("#dSayi").textContent = `${n} seçili`;
   $("#dAd").hidden = n !== 1;
+  $("#dManken").hidden = $("#dGomlek").hidden = !IS;   // proje acik degilse eklenecek yer yok
   const tumu = D.veri && D.veri.klasorler.length + D.veri.dosyalar.length;
   $("#dTumu").textContent = tumu && n === tumu ? "Seçimi kaldır" : "Tümünü seç";
 }
@@ -111,12 +97,12 @@ $("#dIndir").onclick = () => {
 };
 async function iseEkle(tur) {
   const s = secili();
-  mesaj(`${s.length} öğe işe ekleniyor…`);
+  mesaj(`${s.length} öğe projeye ekleniyor…`);
   try {
     IS = await api(`/api/is/${IS.id}/${tur}/drive?${sorgu(s)}`, { method: "POST" });
     ciz(); zamanla();
     D.sec.clear(); driveCiz();
-    mesaj(`Eklendi. Şu an işte ${IS.manken.length} manken, ${IS.gomlek.length} gömlek var. Üretmek için “Boyama” sekmesine geçin.`);
+    mesaj(`Eklendi. Şu an projede ${IS.manken.length} manken, ${IS.gomlek.length} gömlek var. Projeye dönmek için tarayıcıda geri gidin.`);
   } catch (e) { mesaj(e.message); }
 }
 $("#dManken").onclick = () => iseEkle("manken");

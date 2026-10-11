@@ -110,14 +110,15 @@ def resimler(yollar: list[str]) -> list[Path]:
     return out
 
 
-def sonuc_klasoru(ad: str | None = None) -> Path:
-    """Sonuclar/<tarih saat>/ ; ayni ad varsa numaralanir."""
-    ana = KOK / "Sonuçlar"
-    ana.mkdir(exist_ok=True)
-    ad = ad or time.strftime("%Y-%m-%d %H.%M")
-    p, n = ana / ad, 2
+def sonuc_klasoru(proje: str) -> Path:
+    """Sonuçlar/<proje adı>/<tarih saat>/ ; ayni ad varsa numaralanir."""
+    ad = AD_YASAK.sub("-", proje).strip(" .")[:80] or "Proje"
+    ana = KOK / "Sonuçlar" / ad
+    ana.mkdir(parents=True, exist_ok=True)
+    zaman = time.strftime("%Y-%m-%d %H.%M")
+    p, n = ana / zaman, 2
     while p.exists():
-        p, n = ana / f"{ad} ({n})", n + 1
+        p, n = ana / f"{zaman} ({n})", n + 1
     p.mkdir()
     return p
 

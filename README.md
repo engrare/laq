@@ -5,10 +5,12 @@ Mankenin giydiği gömleği, askıdaki gömlek fotoğrafının rengine boyar. D�
 **Sınırlar:** manken ve askıdaki gömlek AYNI model olmalıdır. Sistem cep ya da düğme eklemez. Otomatik maske çok iyidir ama kusursuz değildir (saç altı, el-kol teması); web arayüzündeki fırça ile elle düzeltilir.
 
 ## Nasıl çalışır
-1. **Drive** sekmesi (Google Drive gibi): fotoğraflar klasörlere yüklenir, seçilir, indirilir, taşınır, silinir. Seçilen fotoğraflar (ya da klasörün içindekiler) "Manken olarak ekle" / "Gömlek olarak ekle" ile bir boyama işine eklenir.
-2. Sunucu her mankenin gömlek maskesini çıkarır (SegFormer-b2-clothes ONNX + GrabCut) ve "taralı" önizleme gösterir (kırmızı = boyanacak, yeşil = korunan düğme).
-3. Tarayıcıda fırça (ekle/çıkar), zoom/pan, geri al ve düğme işaretleme ile maske düzeltilir.
-4. "Üret": her manken × her renk görseli 1080 px genişlikte üretilir; sonuçlar Drive'da `Sonuçlar/<tarih saat>/` klasörüne yazılır (ZIP de indirilebilir).
+1. **Projeler** ekranı: yeni proje açılır ya da eski bir proje seçilir. Her proje kendi manken/gömlek fotoğraflarını, maskelerini (fırça düzeltmeleri, düğme işaretleri), renklerini ve son çıktısını **siz silene kadar** hatırlar. Yeni proje boş başlar; eski projeler listede durur, birbirine karışmaz.
+2. Projede manken ve askıdaki gömlek fotoğrafları yüklenir. Sunucu her mankenin gömlek maskesini çıkarır (SegFormer-b2-clothes ONNX + GrabCut) ve "taralı" önizleme gösterir (kırmızı = boyanacak, yeşil = korunan düğme).
+3. Tarayıcıda fırça (ekle/çıkar), zoom/pan, geri al ve düğme işaretleme ile maske düzeltilir; düzeltmeler projeye kaydedilir.
+4. "Üret": her manken × her renk görseli 1080 px genişlikte üretilir. Çıktılar projede görüntülenir (ZIP de indirilebilir) ve Drive'a `Sonuçlar/<proje adı>/<tarih saat>/` klasörüne yazılır.
+
+**Gizli Drive:** Drive arayüzde görünmez; adres çubuğuna `#drive` eklenerek açılır (ör. `https://…/#drive`). Fotoğraf yükleme, klasör, indirme, taşıma ve açık projeye "Manken/Gömlek olarak ekle" burada durur. Proje adresleri `#p/<id>` biçimindedir.
 
 Ölçülen süreler (4 çekirdekli AVX2'siz CPU): manken başına maske ≈ 14 sn, askı fotoğrafından renk okuma ≈ 6 sn, yeni renk başına boyama ≈ 0,2 sn.
 
@@ -31,14 +33,13 @@ Arayüz (`static/`) statik dosyalardır; GitHub Pages'te `docs/` klasöründen y
 ## Ayarlar (ortam değişkenleri)
 | Değişken | Varsayılan | Anlamı |
 |---|---|---|
-| `LAQ_PAROLA` | (zorunlu, ≥8 karakter) | Tek giriş parolası |
+| `LAQ_PAROLA` | (zorunlu, ≥6 karakter) | Tek giriş parolası |
 | `LAQ_PORT` | 8101 | Dinlenen port |
 | `LAQ_ON_YUZ` | `https://laq.engrare.com,http://laq.engrare.com` | İzin verilen arayüz adres(ler)i, virgülle ayrılır |
-| `LAQ_VERI` | `./data` | Yüklenen/üretilen veri klasörü |
-| `LAQ_SAKLA_GUN` | 7 | Eski işlerin otomatik silinme süresi |
+| `LAQ_VERI` | `./data` | Projelerin verisi (fotoğraflar, maskeler, çıktılar); projeler silinmedikçe kalır |
 | `LAQ_MAX_DOSYA_MB` | 15 | Dosya başına boyut sınırı |
 | `LAQ_MAX_MANKEN`, `LAQ_MAX_GOMLEK` | 12, 12 | İş başına fotoğraf sayısı |
-| `LAQ_DRIVE` | `/mnt/hdd/drive/laq-drive` | Drive klasörü (kod ve iş verisinden ayrı; siz silene kadar kalır) |
+| `LAQ_DRIVE` | `/mnt/hdd/drive/annem_iş/laq-drive` | Drive klasörü (kod ve iş verisinden ayrı; siz silene kadar kalır) |
 | `LAQ_DRIVE_MAX_DOSYA_MB` | 40 | Drive'a yüklenen dosya başına sınır |
 | `LAQ_DRIVE_BOS_MIN_GB` | 5 | Diskte bu kadar yer kalmazsa yükleme reddedilir |
 

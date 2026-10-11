@@ -218,7 +218,7 @@ function zamanla() {
 }
 
 // ================================================================== EDITOR
-const ed = { id: null, w: 0, h: 0, mod: "ekle", labels: null, dugme: [], geri: [], olcek: 1, tx: 0, ty: 0, izler: true, orijinal: false,
+const ed = { id: null, w: 0, h: 0, mod: "ekle", labels: null, dugme: [], geri: [], ileri: [], sonNokta: null, bosluk: false, ctrl: false, olcek: 1, tx: 0, ty: 0, izler: true, orijinal: false,
              imgData: null, ptr: new Map(), cizim: null, pinch: null, bekliyor: false };
 const gorus = $("#gorus"), sahne = $("#sahne"), edImg = $("#edImg"), ov = $("#edOv"), dg = $("#edDg"), halka = $("#halka");
 
@@ -226,7 +226,7 @@ async function editorAc(mid) {
   const m = IS.manken.find((k) => k.id === mid);
   if (!m || m.durum === "bekliyor" || m.durum === "hesaplaniyor") { mesaj("Bu fotoğrafın maskesi henüz hesaplanıyor, birkaç saniye bekleyin."); return; }
   if (["kuyrukta", "calisiyor"].includes(IS.uret.durum)) { mesaj("Üretim sürerken düzenlenemez."); return; }
-  ed.id = mid; ed.w = m.w; ed.h = m.h; ed.geri = []; ed.orijinal = false; ed.bekliyor = false;
+  ed.id = mid; ed.w = m.w; ed.h = m.h; ed.geri = []; ed.ileri = []; ed.sonNokta = null; ed.orijinal = false; ed.bekliyor = false;
   ed.labels = new Uint8Array(ed.w * ed.h);   // onceki duzeltmeler sunucuda kayitli ve sonuca islenmis; ekranda yalnizca yeni cizimler
   ed.dugme = JSON.parse(JSON.stringify(m.dugme || []));
   for (const c of [ov, dg]) { c.width = ed.w; c.height = ed.h; }
@@ -283,12 +283,20 @@ function dugmeCiz() {
   }
 }
 function anlik() { return { labels: ed.labels.slice(), dugme: JSON.parse(JSON.stringify(ed.dugme)) }; }
-function geriKoy() { ed.geri.push(anlik()); if (ed.geri.length > 30) ed.geri.shift(); }
-$("#geri").onclick = () => {
-  const s = ed.geri.pop(); if (!s) return;
+function geriKoy() { ed.geri.push(anlik()); ed.ileri = []; if (ed.geri.length > 30) ed.geri.shift(); }
+function durumYukle(s) {
   ed.labels = s.labels; ed.dugme = s.dugme;
   for (let i = 0; i < ed.labels.length; i++) boyaPiksel(i);
   ov.getContext("2d").putImageData(ed.imgData, 0, 0); dugmeCiz();
+  ed.sonNokta = null;
+}
+$("#geri").onclick = () => {
+  const s = ed.geri.pop(); if (!s) return;
+  ed.ileri.push(anlik()); durumYukle(s);
+};
+$("#ileri").onclick = () => {
+  const s = ed.ileri.pop(); if (!s) return;
+  ed.geri.push(anlik()); durumYukle(s);
 };
 
 function modSec(m) {
@@ -296,11 +304,12 @@ function modSec(m) {
   document.querySelectorAll("#arac .mod").forEach((b) => b.classList.toggle("aktif", b.dataset.mod === m));
   const dugme = m === "k" || m === "c";
   if (dugme) $("#boyut").value = m === "k" ? 7 : 5;
-  gorus.style.cursor = m === "kaydir" ? "grab" : "crosshair";
-  halkaGuncelle();
+  imlec(); halkaGuncelle();
 }
+function imlec() { gorus.style.cursor = ed.mod === "kaydir" || ed.bosluk ? "grab" : "crosshair"; }
 document.querySelectorAll("#arac .mod").forEach((b) => (b.onclick = () => modSec(b.dataset.mod)));
-$("#boyut").oninput = halkaGuncelle;
+$("#boyut").oninput = () => halkaGuncelle();
+$("#yardimBtn").onclick = () => { $("#yardim").hidden = !$("#yardim").hidden; };
 $("#goster").onclick = () => { ed.orijinal = !ed.orijinal; resimYukle(IS.manken.find((k) => k.id === ed.id)); };
 $("#izler").onclick = () => { ed.izler = !ed.izler; ov.style.display = dg.style.display = ed.izler ? "" : "none"; $("#izler").textContent = "İzler: " + (ed.izler ? "açık" : "kapalı"); };
 $("#kapat").onclick = () => {
@@ -323,10 +332,16 @@ function halkaGuncelle(e) {
 }
 gorus.addEventListener("contextmenu", (e) => e.preventDefault());
 gorus.addEventListener("pointerleave", () => { halka.style.display = "none"; });
+// Photoshop gibi: tekerlek = dikey kaydır, Alt+tekerlek = yakınlaştır, Ctrl+tekerlek (ya da Shift) = yatay kaydır.
+// Dokunmatik yüzeyde iki parmakla sıkıştırma tarayıcıya "Ctrl+tekerlek" olarak gelir; Ctrl'e gerçekten basılı değilse yakınlaştırma sayılır.
 gorus.addEventListener("wheel", (e) => {
   e.preventDefault();
+  const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+  const dx = e.deltaX * k, dy = e.deltaY * k;
   const r = gorus.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
-  zoom(Math.exp(-e.deltaY * 0.0015), px, py);
+  if (e.altKey || (e.ctrlKey && !ed.ctrl)) zoom(Math.exp(-(dy || dx) * (e.ctrlKey ? 0.01 : 0.0015)), px, py);
+  else if (e.ctrlKey || e.shiftKey) { ed.tx -= dy || dx; donustur(); }
+  else { ed.tx -= dx; ed.ty -= dy; donustur(); }
   halkaGuncelle(e);
 }, { passive: false });
 function zoom(carpan, px, py) {
@@ -334,6 +349,16 @@ function zoom(carpan, px, py) {
   carpan = yeni / ed.olcek;
   ed.tx = px - (px - ed.tx) * carpan; ed.ty = py - (py - ed.ty) * carpan; ed.olcek = yeni;
   donustur(); halkaGuncelle(); dugmeCiz();
+}
+function merkezZoom(carpan) { const r = gorus.getBoundingClientRect(); zoom(carpan, r.width / 2, r.height / 2); }
+function yuzdeYuz() {                     // %100: bir resim pikseli = bir ekran pikseli, görünümün ortasında
+  const r = gorus.getBoundingClientRect(), cx = (r.width / 2 - ed.tx) / ed.olcek, cy = (r.height / 2 - ed.ty) / ed.olcek;
+  ed.olcek = 1; ed.tx = r.width / 2 - cx; ed.ty = r.height / 2 - cy;
+  donustur(); halkaGuncelle(); dugmeCiz();
+}
+function fircaBoyutu(v) {
+  const yeni = Math.min(Math.max(Math.round(v), 1), +$("#boyut").max);
+  $("#boyut").value = yeni; halkaGuncelle(); return yeni;
 }
 
 gorus.addEventListener("pointerdown", (e) => {
@@ -346,7 +371,13 @@ gorus.addEventListener("pointerdown", (e) => {
     return;
   }
   if (ed.ptr.size > 2) return;
-  const kaydir = ed.mod === "kaydir" || e.button === 1;
+  if (e.altKey && e.button === 2) {            // Alt + sağ tuş sürükle: fırça boyutu (sağa büyür, sola küçülür), halka başlangıç noktasında kalır
+    ed.cizim = { tur: "boyut", x: e.clientX, bas: fircaYaricap() };
+    const r = gorus.getBoundingClientRect(); halka.style.left = e.clientX - r.left + "px"; halka.style.top = e.clientY - r.top + "px";
+    halkaGuncelle(); halka.style.display = "block";
+    return;
+  }
+  const kaydir = ed.mod === "kaydir" || e.button === 1 || ed.bosluk;
   if (kaydir) { ed.cizim = { tur: "kaydir", x: e.clientX, y: e.clientY }; gorus.style.cursor = "grabbing"; return; }
   const p = resimKonum(e);
   if (ed.mod === "ekle" || ed.mod === "cikar") {
@@ -354,7 +385,9 @@ gorus.addEventListener("pointerdown", (e) => {
     const sag = e.button === 2;                 // sag tus = ters islem (masaustu aracindaki gibi)
     const deger = (ed.mod === "ekle") !== sag ? 1 : 2;
     ed.cizim = { tur: "firca", deger, son: p };
-    nokta(p.x, p.y, fircaYaricap(), deger);
+    if (e.shiftKey && ed.sonNokta) cizgi(ed.sonNokta, p, fircaYaricap(), deger);   // Shift+tıkla: son noktadan düz çizgi
+    else nokta(p.x, p.y, fircaYaricap(), deger);
+    ed.sonNokta = p;
   } else {
     const r = fircaYaricap();
     const var_ = ed.dugme.findIndex(([x, y, rr]) => Math.hypot(x - p.x, y - p.y) <= Math.max(rr, 4) + 3);
@@ -365,6 +398,10 @@ gorus.addEventListener("pointerdown", (e) => {
   }
 });
 gorus.addEventListener("pointermove", (e) => {
+  if (ed.cizim && ed.cizim.tur === "boyut") {
+    edDurum("Fırça boyutu: " + fircaBoyutu(ed.cizim.bas + (e.clientX - ed.cizim.x) / 3));
+    return;
+  }
   halkaGuncelle(e);
   const onceki = ed.ptr.get(e.pointerId);
   if (!onceki) return;
@@ -383,22 +420,51 @@ gorus.addEventListener("pointermove", (e) => {
     ed.tx += e.clientX - ed.cizim.x; ed.ty += e.clientY - ed.cizim.y; ed.cizim.x = e.clientX; ed.cizim.y = e.clientY; donustur();
   } else if (ed.cizim.tur === "firca") {
     const p = resimKonum(e);
-    cizgi(ed.cizim.son, p, fircaYaricap(), ed.cizim.deger); ed.cizim.son = p;
+    cizgi(ed.cizim.son, p, fircaYaricap(), ed.cizim.deger); ed.cizim.son = ed.sonNokta = p;
   }
 });
 function birak(e) {
   ed.ptr.delete(e.pointerId);
   if (ed.ptr.size < 2) ed.pinch = null;
-  if (ed.ptr.size === 0) { ed.cizim = null; gorus.style.cursor = ed.mod === "kaydir" ? "grab" : "crosshair"; }
+  if (ed.ptr.size === 0) { if (ed.cizim && ed.cizim.tur === "boyut") edDurum(""); ed.cizim = null; imlec(); }
 }
 gorus.addEventListener("pointerup", birak);
 gorus.addEventListener("pointercancel", birak);
 window.addEventListener("resize", () => { if (!$("#editor").hidden) sigdir(); });
+// ---- klavye (Photoshop kısayolları)
+const MODLAR = { b: "ekle", e: "cikar", h: "kaydir", k: "k", c: "c" };
+function tusIzle(e, basili) {
+  if (e.key === "Control") ed.ctrl = basili;
+  if (e.key === " " && !$("#editor").hidden) {
+    e.preventDefault();                          // boşluk: basılıyken geçici "kaydır" aracı; düğmeleri tıklamasın, sayfa kaymasın
+    if (ed.bosluk !== basili) { ed.bosluk = basili; imlec(); }
+  }
+  if (e.key === "Alt" && !$("#editor").hidden) e.preventDefault();   // Alt tek başına tarayıcı menüsünü açmasın
+}
+window.addEventListener("keyup", (e) => tusIzle(e, false));
+window.addEventListener("blur", () => { ed.ctrl = ed.bosluk = false; imlec(); });
 window.addEventListener("keydown", (e) => {
+  tusIzle(e, true);
   if ($("#editor").hidden) return;
-  if ((e.key === "z" || e.key === "Z") && !e.target.matches("input")) $("#geri").click();
-  if (e.key === "[") { $("#boyut").value = Math.max(1, fircaYaricap() - 2); halkaGuncelle(); }
-  if (e.key === "]") { $("#boyut").value = Math.min(60, fircaYaricap() + 2); halkaGuncelle(); }
+  const ctrl = e.ctrlKey || e.metaKey, tus = e.key.toLowerCase();
+  if (ctrl) {
+    if (tus === "z") { e.preventDefault(); $(e.shiftKey ? "#ileri" : "#geri").click(); }
+    else if (tus === "y") { e.preventDefault(); $("#ileri").click(); }
+    else if (tus === "0") { e.preventDefault(); sigdir(); halkaGuncelle(); dugmeCiz(); }
+    else if (tus === "1") { e.preventDefault(); yuzdeYuz(); }
+    else if (tus === "+" || tus === "=") { e.preventDefault(); merkezZoom(1.25); }
+    else if (tus === "-") { e.preventDefault(); merkezZoom(0.8); }
+    return;
+  }
+  if (e.altKey || e.target.matches?.("input[type=text]")) return;
+  if (tus === "z") $("#geri").click();
+  else if (MODLAR[tus]) modSec(MODLAR[tus]);
+  else if (tus === "x" && (ed.mod === "ekle" || ed.mod === "cikar")) modSec(ed.mod === "ekle" ? "cikar" : "ekle");
+  else if (tus === "\\") $("#izler").click();
+  else if (tus === "[" || tus === "]") {
+    const r = fircaYaricap(), adim = Math.max(2, Math.round(r * 0.1));
+    fircaBoyutu(r + (tus === "]" ? adim : -adim));
+  }
 });
 
 // ---- kaydet -> sunucu yeniden hesaplar
@@ -410,7 +476,7 @@ $("#kaydet").onclick = async () => {
   $("#kaydet").disabled = true; edDurum("Gönderiliyor…");
   try {
     IS = await api(`/api/is/${IS.id}/manken/${kid}/duzeltme`, { method: "PUT", body: fd });
-    if (ed.id === kid) { ed.geri = []; ed.bekliyor = true; edDurum(sirada ? "Sıraya eklendi, hesaplanınca güncellenecek…" : "Hesaplanıyor (≈15 sn)…"); }
+    if (ed.id === kid) { ed.geri = []; ed.ileri = []; ed.sonNokta = null; ed.bekliyor = true; edDurum(sirada ? "Sıraya eklendi, hesaplanınca güncellenecek…" : "Hesaplanıyor (≈15 sn)…"); }
     zamanla();
   } catch (e) { edDurum(e.message); }
   $("#kaydet").disabled = false; kaydetEtiket();

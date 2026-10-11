@@ -5,7 +5,7 @@
 <script>if (location.protocol === "http:" && location.hostname.endsWith("engrare.com")) location.replace("https:" + location.href.slice(5));</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>LAQ – Gömlek renklendirme</title>
-<link rel="stylesheet" href="style.css?v=4479bb45">
+<link rel="stylesheet" href="style.css?v=63fd71f1">
 </head>
 <body>
 <section id="giris" hidden>
@@ -114,18 +114,20 @@
 
 <div id="editor" hidden>
   <div id="arac">
-    <button data-mod="ekle" class="mod aktif" title="Boyanacak yeri ekle">Ekle</button>
-    <button data-mod="cikar" class="mod" title="Boyanmayacak yeri çıkar">Çıkar</button>
-    <button data-mod="k" class="mod" title="Metal kapak düğme işaretle">Kapak düğme</button>
-    <button data-mod="c" class="mod" title="Çıt çıt işaretle">Çıt çıt</button>
-    <button data-mod="kaydir" class="mod" title="Kaydır (ya da orta tuş / iki parmak)">Kaydır</button>
-    <label>Boyut <input id="boyut" type="range" min="1" max="60" value="14"></label>
-    <button id="geri" class="ikincil">Geri al</button>
+    <button data-mod="ekle" class="mod aktif" title="Boyanacak yeri ekle (B)">Ekle</button>
+    <button data-mod="cikar" class="mod" title="Boyanmayacak yeri çıkar (E) — X ile ekle/çıkar arası geçiş">Çıkar</button>
+    <button data-mod="k" class="mod" title="Metal kapak düğme işaretle (K)">Kapak düğme</button>
+    <button data-mod="c" class="mod" title="Çıt çıt işaretle (C)">Çıt çıt</button>
+    <button data-mod="kaydir" class="mod" title="Kaydır (H) — ya da Boşluk basılı tut / orta tuş / iki parmak">Kaydır</button>
+    <label>Boyut <input id="boyut" type="range" min="1" max="120" value="14" title="Fırça boyutu: [ ] ya da Alt + sağ tuş ile sağa/sola sürükle"></label>
+    <button id="geri" class="ikincil" title="Ctrl+Z">Geri al</button>
+    <button id="ileri" class="ikincil" title="Ctrl+Shift+Z / Ctrl+Y">İleri al</button>
     <button id="goster" class="ikincil">Orijinal</button>
-    <button id="izler" class="ikincil">İzler: açık</button>
+    <button id="izler" class="ikincil" title="\ tuşu">İzler: açık</button>
     <span class="bosluk"></span>
     <span id="edDurum"></span>
     <button id="kaydet">Kaydet ve yeniden hesapla</button>
+    <button id="yardimBtn" class="ikincil" title="Kısayollar">?</button>
     <button id="kapat" class="ikincil">Kapat</button>
   </div>
   <div id="gorus">
@@ -135,10 +137,32 @@
       <canvas id="edDg"></canvas>
     </div>
     <div id="halka"></div>
+    <div id="yardim" hidden>
+      <b>Fare</b>
+      <dl>
+        <dt>Tekerlek</dt><dd>Yukarı / aşağı kaydır</dd>
+        <dt>Alt + tekerlek</dt><dd>Yakınlaştır / uzaklaştır</dd>
+        <dt>Ctrl (ya da Shift) + tekerlek</dt><dd>Sağa / sola kaydır</dd>
+        <dt>Alt + sağ tuş, sağa/sola sürükle</dt><dd>Fırça boyutu</dd>
+        <dt>Boşluk + sürükle / orta tuş</dt><dd>Resmi tut ve kaydır</dd>
+        <dt>Sağ tuş</dt><dd>Ters işlem (ekle ↔ çıkar)</dd>
+        <dt>Shift + tıkla</dt><dd>Son noktadan düz çizgi</dd>
+      </dl>
+      <b>Klavye</b>
+      <dl>
+        <dt>B / E / H / K / C</dt><dd>Ekle / Çıkar / Kaydır / Kapak düğme / Çıt çıt</dd>
+        <dt>X</dt><dd>Ekle ↔ Çıkar</dd>
+        <dt>[ &nbsp;]</dt><dd>Fırçayı küçült / büyüt</dd>
+        <dt>Ctrl + Z / Ctrl + Shift + Z (Y)</dt><dd>Geri al / ileri al</dd>
+        <dt>Ctrl + 0 / Ctrl + 1</dt><dd>Ekrana sığdır / %100</dd>
+        <dt>Ctrl + + / Ctrl + −</dt><dd>Yakınlaştır / uzaklaştır</dd>
+        <dt>\</dt><dd>İzleri göster / gizle</dd>
+      </dl>
+    </div>
   </div>
 </div>
 <script src="config.js?v=538bf2dd"></script>
-<script src="app.js?v=f26c111c"></script>
+<script src="app.js?v=d1f61a56"></script>
 <script src="drive.js?v=aa448ab2"></script>
 </body>
 </html>

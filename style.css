@@ -79,3 +79,6 @@ button.tehlike{color:#b91c1c}
 .pkart .bil{padding:0 8px 6px;color:#778;font-size:12px}
 .pkart .sil{position:absolute;top:4px;right:4px;padding:0 8px;line-height:24px;background:#000a;font-size:16px}
 .maskeler .kart.cikti img{cursor:pointer}
+#yardim{position:absolute;right:10px;top:10px;max-width:min(380px,90vw);padding:10px 12px;background:rgba(17,24,39,.94);color:#e5e7eb;border:1px solid #374151;border-radius:8px;font-size:13px;z-index:2}
+#yardim dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:4px 0 10px}
+#yardim dt{color:#93c5fd;font-weight:600}#yardim dd{margin:0}
